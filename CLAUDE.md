@@ -25,6 +25,7 @@ Primary purpose is educational — user is learning AI development while buildin
 - DO explain AI concepts in detail — that is the learning goal
 - Never commit or push without explicit user instruction
 - Do not add files, refactors, comments, or features that were not asked for
+- Always write .md files in English
 
 ---
 
