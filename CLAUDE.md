@@ -75,6 +75,28 @@ ExtensionSummarizer/
 
 ---
 
+## Development Workflow
+
+### Active development (during a feature/task)
+- Backend is developed and run locally in **Visual Studio** (F5, hot reload, debugger)
+- Only the Ollama container runs in Docker during development: `docker compose up ollama -d`
+- `appsettings.json` points to `http://localhost:11434` — correct for local dev
+- Docker Compose overrides this with `Ollama__BaseUrl=http://ollama:11434` for the container env
+
+### End of feature/task
+- After development is done and committed, rebuild **only the API container**:
+  ```
+  docker compose up -d --build backend
+  ```
+- Ollama container is never rebuilt — it has no source code, only the downloaded model volume
+- This gives a production-like local environment to verify the full stack before merging
+
+### Production (Phase 4)
+- Same `docker-compose.yml` goes to VPS
+- Possibly swap Ollama with a cloud model — API code does not change
+
+---
+
 ## API Contract
 ```
 POST /api/summary

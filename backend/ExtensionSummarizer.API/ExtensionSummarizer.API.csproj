@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>ExtensionSummarizer.API</RootNamespace>
+    <NoWarn>SKEXP0010</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
