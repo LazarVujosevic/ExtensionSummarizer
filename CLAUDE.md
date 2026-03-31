@@ -6,6 +6,10 @@ After every session that ends with a commit/push, update this file with any new 
 - decisions made and why
 - anything that would be useful context for the next session
 
+## Sprint Workflow
+- Each ticket = separate session; user works, Claude assists
+- End of sprint = Claude validates everything, runs end-to-end checks, creates tickets for next sprint
+
 ---
 
 ## About the Project
@@ -21,8 +25,9 @@ Primary purpose is educational — user is learning AI development while buildin
 - Editors: Visual Studio (backend), VS Code (extension)
 
 ## Behavior Rules
-- Do NOT explain .NET, Docker, Git, or general dev concepts — user knows these
-- DO explain AI concepts in detail — that is the learning goal
+- Always explain what you are doing and why — user is here to learn, not just to get code
+- Explain AI concepts in extra detail — that is the primary learning goal
+- Explaining .NET, Docker, and general dev concepts is welcome too
 - Never commit or push without explicit user instruction
 - Do not add files, refactors, comments, or features that were not asked for
 - Always write .md files in English
