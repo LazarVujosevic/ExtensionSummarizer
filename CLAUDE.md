@@ -75,6 +75,28 @@ ExtensionSummarizer/
 
 ---
 
+## Development Workflow
+
+### Active development (during a feature/task)
+- Backend is developed and run locally in **Visual Studio** (F5, hot reload, debugger)
+- Only the Ollama container runs in Docker during development: `docker compose up ollama -d`
+- `appsettings.json` points to `http://localhost:11434` — correct for local dev
+- Docker Compose overrides this with `Ollama__BaseUrl=http://ollama:11434` for the container env
+
+### End of feature/task
+- After development is done and committed, rebuild **only the API container**:
+  ```
+  docker compose up -d --build backend
+  ```
+- Ollama container is never rebuilt — it has no source code, only the downloaded model volume
+- This gives a production-like local environment to verify the full stack before merging
+
+### Production (Phase 4)
+- Same `docker-compose.yml` goes to VPS
+- Possibly swap Ollama with a cloud model — API code does not change
+
+---
+
 ## API Contract
 ```
 POST /api/summary
@@ -89,6 +111,19 @@ Response: { "summary": "...", "wordCount": 850, "processingTimeMs": 4200 }
 - Output: Serbian (Latin script)
 - Temperature: 0.3, MaxTokens: 300
 - Ollama is called via its OpenAI-compatible `/v1` endpoint (works with standard SK OpenAI connector)
+
+### Known model quality issues (observed in testing, to be addressed in Phase 3)
+- Llama 3.1 mixes ekavica and ijekavica in the same response — system prompt needs explicit dialect instruction, e.g. `Use Serbian ekavica dialect only (never ijekavica)`
+- Without a strict prompt, model may ignore the 3-sentence constraint — few-shot examples planned
+- Model transliterates foreign names phonetically (e.g. "Džeims Okafor") — consider instructing it to keep names in original form
+
+---
+
+## Technical Decisions & Known Issues
+
+- **SKEXP0010 suppressed** in `.csproj` — `AddOpenAIChatCompletion` with custom endpoint is a Semantic Kernel experimental API (SKEXP = Semantic Kernel EXPerimental). It works reliably; suppression is the standard SK pattern. Revisit if SK releases a stable connector for Ollama.
+- **Ollama health check uses `ollama list`** — `curl` is not available in the Ollama Docker image. `ollama list` connects to the local server and succeeds only when it is ready, making it a reliable health check.
+- **`ollama-init` has no `sleep`** — replaced with `depends_on: condition: service_healthy` so Docker Compose waits for Ollama to be truly ready before pulling the model.
 
 ---
 
