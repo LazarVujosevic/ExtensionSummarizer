@@ -72,10 +72,13 @@ ExtensionSummarizer/
 └── extension/
     ├── manifest.json
     ├── package.json + package-lock.json + tsconfig.json + vite.config.ts + vitest.config.ts
+    ├── public/
+    │   └── icons/icon16.png + icon48.png + icon128.png
     └── src/
-        ├── popup/popup.html + main.tsx + Popup.tsx
+        ├── popup/popup.html + main.tsx + Popup.tsx + Popup.test.tsx
         ├── content/content.ts + extract.ts + extract.test.ts
-        └── background/background.ts
+        ├── background/background.ts
+        └── setupTests.ts
 ```
 
 ---
@@ -169,8 +172,15 @@ Response: { "summary": "...", "wordCount": 850, "processingTimeMs": 4200 }
 - **Readability.parse() almost never returns null** — it will extract content from any page with text, including navigation-only pages. It returns null only for completely empty pages. Do not rely on null as a "this is not an article" signal for pages with any visible text.
 - **`package-lock.json` is tracked in git** — `node_modules/` and `extension/dist/` are in `.gitignore` and must not be committed.
 - **Unit test counts at end of Sprint 2** — Backend: 25 tests (xUnit + Moq), Extension: 7 tests (Vitest + jsdom). All passing.
+- **Unit test counts after ticket 3.4** — Extension: 12 tests total (7 existing + 5 new Popup tests). Backend unchanged at 25.
 - **`gh issue close` must never be called on merge** — GitHub auto-closes issues linked with `Closes #X` in PR body. Use `References #X` instead to link without auto-closing. If accidentally closed, reopen immediately with `gh issue reopen`.
 - **Node.js PATH in Git Bash** — `export PATH=$PATH:"/c/Program Files/nodejs"` must be run before `npm test` in Git Bash sessions. Already added to `~/.bashrc`.
+- **Extension icons added (ticket 3.1)** — PNG icons (16x16, 48x48, 128x128) generated with a one-off Node.js script using only built-ins (`zlib`, `fs`) — no canvas or image library needed for simple geometric icons. Icons placed in `extension/public/icons/`. Vite copies everything in `public/` verbatim to `dist/` at build time — no import or configuration needed beyond placing files there. `manifest.json` updated with top-level `icons` (used on `chrome://extensions` page) and `action.default_icon` (used in the Chrome toolbar).
+- **`Closes #X` in commit messages also auto-closes issues** — GitHub closes linked issues not only from PR body but also from commit messages that are part of the merged PR. Use `References #X` in both commit messages and PR body to avoid unintended auto-close.
+- **Fetch timeout with AbortController (ticket 3.4)** — `Popup.tsx` wraps the `fetch` call with `AbortController` and a 60s `setTimeout`. On timeout, the browser throws `DOMException` with `name === 'AbortError'`. The catch block checks `err instanceof DOMException && err.name === 'AbortError'` first, before other error checks. `clearTimeout` is called in `finally` to avoid leaking the timer on success or early error.
+- **`@testing-library/react` added for Popup component tests** — Plain jsdom is enough for pure functions (`extract.ts`), but React components need `@testing-library/react` to render and interact. Added `@testing-library/jest-dom` for DOM matchers (`toBeInTheDocument`). Setup in `src/setupTests.ts`; Vitest configured with `globals: true` and `setupFiles: ['./src/setupTests.ts']` in `vitest.config.ts`.
+- **`vi.useFakeTimers()` breaks `waitFor` from Testing Library** — `waitFor` internally uses `setInterval`, which becomes fake when `vi.useFakeTimers()` is active. This causes the timeout test to hang. Solution: mock `fetch` to immediately reject with `new DOMException('Aborted', 'AbortError')` instead of simulating the real 60s wait. This tests the catch block logic correctly without timer complexity.
+- **`gh pr create --head` flag needed with untracked files** — `gh pr create` aborts if the working tree has untracked files, even if they are irrelevant to the PR. Use `--head feature/branch-name` to bypass this check.
 
 ---
 
