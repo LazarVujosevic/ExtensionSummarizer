@@ -57,17 +57,21 @@ ExtensionSummarizer/
 ├── .gitignore
 ├── backend/
 │   ├── Dockerfile
-│   └── ExtensionSummarizer.API/
-│       ├── Controllers/SummaryController.cs
-│       ├── Services/ISummaryService.cs + SummaryService.cs
-│       ├── Models/SummaryRequest.cs + SummaryResponse.cs
-│       ├── Properties/launchSettings.json
-│       ├── appsettings.json
-│       ├── Program.cs
-│       └── ExtensionSummarizer.API.csproj
+│   ├── ExtensionSummarizer.API/
+│   │   ├── Controllers/SummaryController.cs
+│   │   ├── Services/ISummaryService.cs + SummaryService.cs
+│   │   ├── Models/SummaryRequest.cs + SummaryResponse.cs
+│   │   ├── Properties/launchSettings.json
+│   │   ├── appsettings.json
+│   │   ├── Program.cs
+│   │   └── ExtensionSummarizer.API.csproj
+│   └── ExtensionSummarizer.API.Tests/
+│       ├── SummaryControllerTests.cs
+│       ├── SummaryServiceWordCountTests.cs
+│       └── ExtensionSummarizer.API.Tests.csproj
 └── extension/
     ├── manifest.json
-    ├── package.json + tsconfig.json + vite.config.ts
+    ├── package.json + package-lock.json + tsconfig.json + vite.config.ts
     └── src/
         ├── popup/popup.html + main.tsx + Popup.tsx
         ├── content/content.ts
@@ -149,6 +153,10 @@ Response: { "summary": "...", "wordCount": 850, "processingTimeMs": 4200 }
 - **OpenAPI UI is Scalar, not Swagger** — .NET 9/10 removed Swagger UI from the default template. `Microsoft.AspNetCore.OpenApi` only provides the JSON spec at `/openapi/v1.json`. `Scalar.AspNetCore` was added to serve the interactive UI at `/scalar/v1`. `launchSettings.json` `launchUrl` updated to `scalar/v1` accordingly.
 - **Port 5000 conflict during local dev** — the Docker backend container occupies port 5000, so `dotnet run` (or F5 in Visual Studio) will fail if the container is running. Workflow: `docker compose stop backend` before starting locally, then `docker compose up -d --build backend` when done.
 - **SemanticKernel 1.24.1 has a known critical vulnerability** — `GHSA-2ww3-72rp-wpp4` in `Microsoft.SemanticKernel.Core`. Not blocking for local dev, but must be upgraded before any production deployment.
+- **Node.js not pre-installed on dev machine** — installed via `winget install OpenJS.NodeJS.LTS` (v24.14.1). Not in PATH for Git Bash by default; use full path `/c/Program Files/nodejs/npm.cmd` or add to PATH manually. `npm install` and `npm run build` must be run from `extension/` folder.
+- **`extractPageText` in Popup.tsx is a Phase 1 stub** — currently returns `document.body.innerText.slice(0, 8000)`. Will be replaced with Readability.js in ticket 2.2. No unit tests written for it — trivial one-liner with no branching logic.
+- **Extension build verified (ticket 2.1)** — `npm run build` succeeds cleanly. `dist/` structure matches `manifest.json`: popup HTML + JS at `dist/src/popup/`, background at `dist/src/background/background.js`, content script at `dist/src/content/content.js`. Warning `Generated an empty chunk: "content"` is expected — `content.ts` is a stub. Warning `Cannot connect to json.schemastore.org` is benign (manifest schema validation skipped offline).
+- **`package-lock.json` is tracked in git** — `node_modules/` and `extension/dist/` are in `.gitignore` and must not be committed.
 
 ---
 
@@ -156,6 +164,6 @@ Response: { "summary": "...", "wordCount": 850, "processingTimeMs": 4200 }
 | Phase | Status | Description |
 |---|---|---|
 | 1 — AI Core | ✅ | Docker Compose + Ollama + ASP.NET API + Semantic Kernel + prompt tuning + Scalar UI |
-| 2 — Extension | 🔜 | Readability.js integration + React UI polish |
+| 2 — Extension | 🔄 | Readability.js integration + React UI polish |
 | 3 — Integration | 🔜 | End-to-end test, error handling |
 | 4 — Production | 🔜 | VPS deploy + Chrome Web Store (optional) |
