@@ -71,10 +71,10 @@ ExtensionSummarizer/
 │       └── ExtensionSummarizer.API.Tests.csproj
 └── extension/
     ├── manifest.json
-    ├── package.json + package-lock.json + tsconfig.json + vite.config.ts
+    ├── package.json + package-lock.json + tsconfig.json + vite.config.ts + vitest.config.ts
     └── src/
         ├── popup/popup.html + main.tsx + Popup.tsx
-        ├── content/content.ts
+        ├── content/content.ts + extract.ts + extract.test.ts
         └── background/background.ts
 ```
 
@@ -95,6 +95,12 @@ ExtensionSummarizer/
   ```
 - Ollama container is never rebuilt — it has no source code, only the downloaded model volume
 - This gives a production-like local environment to verify the full stack before merging
+
+### Testing the extension in Chrome (manual)
+- Run `npm run build` in `extension/`
+- Open `chrome://extensions` → enable **Developer mode** → click **Load unpacked** → select `extension/dist/`
+- After any code change: rebuild, then click the **refresh icon** on the extension card in `chrome://extensions`
+- The extension icon appears in the Chrome toolbar — click it to open the popup
 
 ### Production (Phase 4)
 - Same `docker-compose.yml` goes to VPS
@@ -154,8 +160,10 @@ Response: { "summary": "...", "wordCount": 850, "processingTimeMs": 4200 }
 - **Port 5000 conflict during local dev** — the Docker backend container occupies port 5000, so `dotnet run` (or F5 in Visual Studio) will fail if the container is running. Workflow: `docker compose stop backend` before starting locally, then `docker compose up -d --build backend` when done.
 - **SemanticKernel 1.24.1 has a known critical vulnerability** — `GHSA-2ww3-72rp-wpp4` in `Microsoft.SemanticKernel.Core`. Not blocking for local dev, but must be upgraded before any production deployment.
 - **Node.js not pre-installed on dev machine** — installed via `winget install OpenJS.NodeJS.LTS` (v24.14.1). Not in PATH for Git Bash by default; use full path `/c/Program Files/nodejs/npm.cmd` or add to PATH manually. `npm install` and `npm run build` must be run from `extension/` folder.
-- **`extractPageText` in Popup.tsx is a Phase 1 stub** — currently returns `document.body.innerText.slice(0, 8000)`. Will be replaced with Readability.js in ticket 2.2. No unit tests written for it — trivial one-liner with no branching logic.
-- **Extension build verified (ticket 2.1)** — `npm run build` succeeds cleanly. `dist/` structure matches `manifest.json`: popup HTML + JS at `dist/src/popup/`, background at `dist/src/background/background.js`, content script at `dist/src/content/content.js`. Warning `Generated an empty chunk: "content"` is expected — `content.ts` is a stub. Warning `Cannot connect to json.schemastore.org` is benign (manifest schema validation skipped offline).
+- **Readability.js integrated in ticket 2.2** — `content.ts` now uses `@mozilla/readability` via a `chrome.runtime.onMessage` listener. Extraction logic is isolated in `extract.ts` (pure function, no Chrome APIs) so it can be unit tested. `Popup.tsx` uses `chrome.tabs.sendMessage` instead of `chrome.scripting.executeScript`. A `not-article` status is shown when Readability returns null.
+- **Extension build verified (ticket 2.1)** — `npm run build` succeeds cleanly. `dist/` structure matches `manifest.json`. After ticket 2.2, `content.js` grew from 0.03 kB to 33.82 kB — Readability.js is bundled into the content script, which is correct.
+- **Vitest added for extension tests (ticket 2.2)** — `npm test` runs Vitest with jsdom environment. Config in `vitest.config.ts`. Test scripts: `npm test` (single run), `npm run test:watch` (watch mode).
+- **Readability.parse() almost never returns null** — it will extract content from any page with text, including navigation-only pages. It returns null only for completely empty pages. Do not rely on null as a "this is not an article" signal for pages with any visible text.
 - **`package-lock.json` is tracked in git** — `node_modules/` and `extension/dist/` are in `.gitignore` and must not be committed.
 
 ---

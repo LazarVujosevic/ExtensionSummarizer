@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-type Status = 'idle' | 'loading' | 'success' | 'error'
+type Status = 'idle' | 'loading' | 'success' | 'error' | 'not-article'
 
 const BACKEND_URL = 'http://localhost:5000/api/summary'
 
@@ -17,17 +17,17 @@ export default function Popup() {
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
 
-      const [result] = await chrome.scripting.executeScript({
-        target: { tabId: tab.id! },
-        func: extractPageText,
-      })
+      const extracted = await chrome.tabs.sendMessage(tab.id!, { action: 'extract' }) as { title: string; text: string } | null
 
-      const text = result.result as string
+      if (!extracted) {
+        setStatus('not-article')
+        return
+      }
 
       const response = await fetch(BACKEND_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: tab.url, text }),
+        body: JSON.stringify({ url: tab.url, text: extracted.text }),
       })
 
       if (!response.ok) throw new Error('Backend error')
@@ -63,6 +63,12 @@ export default function Popup() {
         </div>
       )}
 
+      {status === 'not-article' && (
+        <p style={{ marginTop: 12, color: '#888', fontSize: 13 }}>
+          Ova stranica nije članak.
+        </p>
+      )}
+
       {status === 'error' && (
         <p style={{ marginTop: 12, color: 'red', fontSize: 13 }}>
           Greška. Proveri da li backend radi.
@@ -70,10 +76,4 @@ export default function Popup() {
       )}
     </div>
   )
-}
-
-// Runs in page context via chrome.scripting.executeScript
-// Phase 2: Replace with Readability.js for proper article extraction
-function extractPageText(): string {
-  return document.body.innerText.slice(0, 8000)
 }
