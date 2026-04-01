@@ -28,7 +28,7 @@ Primary purpose is educational — user is learning AI development while buildin
 - Always explain what you are doing and why — user is here to learn, not just to get code
 - Explain AI concepts in extra detail — that is the primary learning goal
 - Explaining .NET, Docker, and general dev concepts is welcome too
-- Never commit or push without explicit user instruction
+- **Never commit or push without explicitly asking the user first and receiving confirmation** — this applies to every session, every branch, every commit, no exceptions
 - Do not add files, refactors, comments, or features that were not asked for
 - Always write .md files in English
 
