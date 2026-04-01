@@ -127,8 +127,16 @@ Response: { "summary": "...", "wordCount": 850, "processingTimeMs": 4200 }
 
 **Temperature 0.5 was tested and rejected** — introduced typos in Serbian output; 0.3 is stable and accurate.
 
-**Known remaining limitation:**
+**Known remaining limitations (validated in ticket 1.4 end-to-end testing):**
 - On very short articles (<3 paragraphs), the model may still produce 2 sentences instead of 3 — this is a Llama 3.1 8B capacity limit, not a prompt issue. Real news articles (always longer) produce 3 sentences correctly.
+- Model output is non-deterministic — same prompt can yield 3 sentences on one call and 4 on the next. This is a fundamental LLM property, not a bug.
+- Name transliteration still occurs occasionally despite the instruction — Llama 3.1 8B does not follow it reliably 100% of the time.
+- **Few-shot context overhead** — the static user/assistant example pair adds ~400 tokens to every request, increasing processing time from ~14s to ~28s on average. Consider removing if latency becomes a priority in Phase 4.
+
+**`wordCount` field semantics:**
+- `SummaryResponse.WordCount` counts words in the **input text** (the article), not the summary.
+- This is intentional — it tells the extension user how long the original article was.
+- Not a bug, but future sessions should be aware of this if the field name causes confusion.
 
 ---
 
