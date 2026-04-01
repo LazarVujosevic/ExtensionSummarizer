@@ -112,10 +112,23 @@ Response: { "summary": "...", "wordCount": 850, "processingTimeMs": 4200 }
 - Temperature: 0.3, MaxTokens: 300
 - Ollama is called via its OpenAI-compatible `/v1` endpoint (works with standard SK OpenAI connector)
 
-### Known model quality issues (observed in testing, to be addressed in Phase 3)
-- Llama 3.1 mixes ekavica and ijekavica in the same response — system prompt needs explicit dialect instruction, e.g. `Use Serbian ekavica dialect only (never ijekavica)`
-- Without a strict prompt, model may ignore the 3-sentence constraint — few-shot examples planned
-- Model transliterates foreign names phonetically (e.g. "Džeims Okafor") — consider instructing it to keep names in original form
+### Prompt tuning decisions (ticket 1.2 — validated via direct Ollama API calls)
+
+**Final system prompt includes:**
+- Explicit ekavica instruction with counter-examples (`write 'gde' not 'gdje'`) — without this, Llama 3.1 mixes dialects
+- Instruction to keep foreign personal names and brand names in original spelling — without this, model transliterates phonetically
+- "Always write exactly 3 sentences" — necessary but not sufficient on its own (see few-shot below)
+
+**Few-shot example in ChatHistory:**
+- `SummaryService.cs` adds a static user/assistant message pair before the real request
+- This is more reliable than instructions alone for enforcing the 3-sentence structure
+- Llama 3.1 8B does not consistently follow structural constraints from the system prompt; showing a concrete example anchors the format
+- The example uses a Bank of England article (neutral, short, has a clear 3-part structure)
+
+**Temperature 0.5 was tested and rejected** — introduced typos in Serbian output; 0.3 is stable and accurate.
+
+**Known remaining limitation:**
+- On very short articles (<3 paragraphs), the model may still produce 2 sentences instead of 3 — this is a Llama 3.1 8B capacity limit, not a prompt issue. Real news articles (always longer) produce 3 sentences correctly.
 
 ---
 
@@ -130,7 +143,7 @@ Response: { "summary": "...", "wordCount": 850, "processingTimeMs": 4200 }
 ## Development Phases
 | Phase | Status | Description |
 |---|---|---|
-| 1 — AI Core | ✅ | Docker Compose + Ollama + ASP.NET API + Semantic Kernel |
+| 1 — AI Core | ✅ | Docker Compose + Ollama + ASP.NET API + Semantic Kernel + prompt tuning |
 | 2 — Extension | 🔜 | Readability.js integration + React UI polish |
 | 3 — Integration | 🔜 | End-to-end test, error handling |
 | 4 — Production | 🔜 | VPS deploy + Chrome Web Store (optional) |
