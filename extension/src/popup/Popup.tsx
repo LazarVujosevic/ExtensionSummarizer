@@ -1,8 +1,9 @@
 import { useState } from 'react'
 
-type Status = 'idle' | 'loading' | 'success' | 'error' | 'not-article' | 'unsupported-page'
+type Status = 'idle' | 'loading' | 'success' | 'error' | 'not-article' | 'unsupported-page' | 'timeout'
 
 const BACKEND_URL = 'http://localhost:5000/api/summary'
+const FETCH_TIMEOUT_MS = 60_000
 
 export default function Popup() {
   const [summary, setSummary] = useState<string>('')
@@ -13,6 +14,9 @@ export default function Popup() {
   const handleSummarize = async () => {
     setStatus('loading')
     setSummary('')
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
@@ -28,6 +32,7 @@ export default function Popup() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: tab.url, text: extracted.text }),
+        signal: controller.signal,
       })
 
       if (!response.ok) throw new Error('Backend error')
@@ -38,12 +43,18 @@ export default function Popup() {
       setProcessingTime(data.processingTimeMs)
       setStatus('success')
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      if (message.includes('Could not establish connection')) {
-        setStatus('unsupported-page')
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setStatus('timeout')
       } else {
-        setStatus('error')
+        const message = err instanceof Error ? err.message : String(err)
+        if (message.includes('Could not establish connection')) {
+          setStatus('unsupported-page')
+        } else {
+          setStatus('error')
+        }
       }
+    } finally {
+      clearTimeout(timeoutId)
     }
   }
 
@@ -83,6 +94,12 @@ export default function Popup() {
       {status === 'error' && (
         <p style={{ marginTop: 12, color: 'red', fontSize: 13 }}>
           Greška. Proveri da li backend radi.
+        </p>
+      )}
+
+      {status === 'timeout' && (
+        <p style={{ marginTop: 12, color: 'red', fontSize: 13 }}>
+          Zahtev je trajao predugo. Pokušaj ponovo.
         </p>
       )}
     </div>
