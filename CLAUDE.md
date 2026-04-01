@@ -72,6 +72,8 @@ ExtensionSummarizer/
 └── extension/
     ├── manifest.json
     ├── package.json + package-lock.json + tsconfig.json + vite.config.ts + vitest.config.ts
+    ├── public/
+    │   └── icons/icon16.png + icon48.png + icon128.png
     └── src/
         ├── popup/popup.html + main.tsx + Popup.tsx
         ├── content/content.ts + extract.ts + extract.test.ts
@@ -171,6 +173,8 @@ Response: { "summary": "...", "wordCount": 850, "processingTimeMs": 4200 }
 - **Unit test counts at end of Sprint 2** — Backend: 25 tests (xUnit + Moq), Extension: 7 tests (Vitest + jsdom). All passing.
 - **`gh issue close` must never be called on merge** — GitHub auto-closes issues linked with `Closes #X` in PR body. Use `References #X` instead to link without auto-closing. If accidentally closed, reopen immediately with `gh issue reopen`.
 - **Node.js PATH in Git Bash** — `export PATH=$PATH:"/c/Program Files/nodejs"` must be run before `npm test` in Git Bash sessions. Already added to `~/.bashrc`.
+- **Extension icons added (ticket 3.1)** — PNG icons (16x16, 48x48, 128x128) generated with a one-off Node.js script using only built-ins (`zlib`, `fs`) — no canvas or image library needed for simple geometric icons. Icons placed in `extension/public/icons/`. Vite copies everything in `public/` verbatim to `dist/` at build time — no import or configuration needed beyond placing files there. `manifest.json` updated with top-level `icons` (used on `chrome://extensions` page) and `action.default_icon` (used in the Chrome toolbar).
+- **`Closes #X` in commit messages also auto-closes issues** — GitHub closes linked issues not only from PR body but also from commit messages that are part of the merged PR. Use `References #X` in both commit messages and PR body to avoid unintended auto-close.
 
 ---
 
