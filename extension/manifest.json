@@ -3,7 +3,7 @@
   "name": "ExtensionSummarizer",
   "version": "1.0.0",
   "description": "Summarize news articles with AI",
-  "permissions": ["activeTab", "scripting"],
+  "permissions": ["activeTab"],
   "host_permissions": ["<all_urls>"],
   "action": {
     "default_popup": "src/popup/popup.html"
