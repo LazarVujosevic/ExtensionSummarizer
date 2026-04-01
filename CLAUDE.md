@@ -161,6 +161,7 @@ Response: { "summary": "...", "wordCount": 850, "processingTimeMs": 4200 }
 - **SemanticKernel 1.24.1 has a known critical vulnerability** — `GHSA-2ww3-72rp-wpp4` in `Microsoft.SemanticKernel.Core`. Not blocking for local dev, but must be upgraded before any production deployment.
 - **Node.js not pre-installed on dev machine** — installed via `winget install OpenJS.NodeJS.LTS` (v24.14.1). Not in PATH for Git Bash by default; use full path `/c/Program Files/nodejs/npm.cmd` or add to PATH manually. `npm install` and `npm run build` must be run from `extension/` folder.
 - **Readability.js integrated in ticket 2.2** — `content.ts` now uses `@mozilla/readability` via a `chrome.runtime.onMessage` listener. Extraction logic is isolated in `extract.ts` (pure function, no Chrome APIs) so it can be unit tested. `Popup.tsx` uses `chrome.tabs.sendMessage` instead of `chrome.scripting.executeScript`. A `not-article` status is shown when Readability returns null.
+- **End-to-end test passed (ticket 2.5)** — Extension tested in Chrome with unpacked dist/. Verified: summary generated on Serbian news articles (RTS, N1, B92), "Ova stranica nije članak." shown on non-article pages, "Ekstenzija ne radi na ovoj stranici." shown on chrome:// pages. No runtime errors. Phase 2 complete.
 - **Manifest permissions (ticket 2.4)** — `"scripting"` permission removed from `manifest.json` since `executeScript` was replaced by `sendMessage` in ticket 2.2. Final permissions: `["activeTab"]`. `"tabs"` is not needed — `activeTab` covers `tabs.query`, `tabs.sendMessage`, and `tab.url` access for the active tab. `host_permissions: ["<all_urls>"]` retained for the `fetch` call to `localhost:5000`.
 - **Popup error states (ticket 2.3)** — Three distinct error states in `Popup.tsx`: `not-article` (Readability returned null), `unsupported-page` (content script not loaded — `chrome://`, `about:` pages throw "Could not establish connection"), `error` (backend unreachable or returned non-OK). The catch block inspects the error message string to distinguish `unsupported-page` from `error`.
 - **Extension build verified (ticket 2.1)** — `npm run build` succeeds cleanly. `dist/` structure matches `manifest.json`. After ticket 2.2, `content.js` grew from 0.03 kB to 33.82 kB — Readability.js is bundled into the content script, which is correct.
@@ -174,6 +175,6 @@ Response: { "summary": "...", "wordCount": 850, "processingTimeMs": 4200 }
 | Phase | Status | Description |
 |---|---|---|
 | 1 — AI Core | ✅ | Docker Compose + Ollama + ASP.NET API + Semantic Kernel + prompt tuning + Scalar UI |
-| 2 — Extension | 🔄 | Readability.js integration + React UI polish |
+| 2 — Extension | ✅ | Readability.js integration + React UI polish |
 | 3 — Integration | 🔜 | End-to-end test, error handling |
 | 4 — Production | 🔜 | VPS deploy + Chrome Web Store (optional) |
