@@ -149,4 +149,47 @@ public class SummaryControllerTests
 
         _serviceMock.Verify(s => s.SummarizeAsync(It.IsAny<SummaryRequest>()), Times.Once);
     }
+
+    [Fact]
+    public async Task Summarize_WhenUrlIsMissing_StillCallsService()
+    {
+        // Url is optional — only Text is required
+        _serviceMock
+            .Setup(s => s.SummarizeAsync(It.IsAny<SummaryRequest>()))
+            .ReturnsAsync(new SummaryResponse());
+
+        await _controller.Summarize(new SummaryRequest { Text = "Article text." });
+
+        _serviceMock.Verify(s => s.SummarizeAsync(It.IsAny<SummaryRequest>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Summarize_WhenServiceReturnsEmptySummary_ReturnsOkWithEmptySummary()
+    {
+        // Backend should not reject an empty summary — that is a model/prompt concern, not a controller concern
+        _serviceMock
+            .Setup(s => s.SummarizeAsync(It.IsAny<SummaryRequest>()))
+            .ReturnsAsync(new SummaryResponse { Summary = string.Empty, WordCount = 10 });
+
+        var result = await _controller.Summarize(new SummaryRequest { Text = "Article text." });
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<SummaryResponse>(ok.Value);
+        Assert.Equal(string.Empty, response.Summary);
+    }
+
+    [Fact]
+    public async Task Summarize_WhenTextIsVeryLong_CallsServiceWithFullText()
+    {
+        var longText = string.Join(" ", Enumerable.Repeat("reč", 5000));
+        _serviceMock
+            .Setup(s => s.SummarizeAsync(It.IsAny<SummaryRequest>()))
+            .ReturnsAsync(new SummaryResponse { Summary = "Summary.", WordCount = 5000 });
+
+        var result = await _controller.Summarize(new SummaryRequest { Text = longText });
+
+        _serviceMock.Verify(s => s.SummarizeAsync(
+            It.Is<SummaryRequest>(r => r.Text == longText)), Times.Once);
+        Assert.IsType<OkObjectResult>(result.Result);
+    }
 }

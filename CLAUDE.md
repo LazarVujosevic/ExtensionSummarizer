@@ -168,6 +168,9 @@ Response: { "summary": "...", "wordCount": 850, "processingTimeMs": 4200 }
 - **Vitest added for extension tests (ticket 2.2)** — `npm test` runs Vitest with jsdom environment. Config in `vitest.config.ts`. Test scripts: `npm test` (single run), `npm run test:watch` (watch mode).
 - **Readability.parse() almost never returns null** — it will extract content from any page with text, including navigation-only pages. It returns null only for completely empty pages. Do not rely on null as a "this is not an article" signal for pages with any visible text.
 - **`package-lock.json` is tracked in git** — `node_modules/` and `extension/dist/` are in `.gitignore` and must not be committed.
+- **Unit test counts at end of Sprint 2** — Backend: 25 tests (xUnit + Moq), Extension: 7 tests (Vitest + jsdom). All passing.
+- **`gh issue close` must never be called on merge** — GitHub auto-closes issues linked with `Closes #X` in PR body. Use `References #X` instead to link without auto-closing. If accidentally closed, reopen immediately with `gh issue reopen`.
+- **Node.js PATH in Git Bash** — `export PATH=$PATH:"/c/Program Files/nodejs"` must be run before `npm test` in Git Bash sessions. Already added to `~/.bashrc`.
 
 ---
 
