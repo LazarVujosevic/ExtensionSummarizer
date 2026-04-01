@@ -8,6 +8,7 @@ After every session that ends with a commit/push, update this file with any new 
 
 ## Sprint Workflow
 - Each ticket = separate session; user works, Claude assists
+- After every ticket, developer must write unit tests and all tests must pass before moving on
 - End of sprint = Claude validates everything, runs end-to-end checks, creates tickets for next sprint
 
 ---
