@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-type Status = 'idle' | 'loading' | 'success' | 'error' | 'not-article'
+type Status = 'idle' | 'loading' | 'success' | 'error' | 'not-article' | 'unsupported-page'
 
 const BACKEND_URL = 'http://localhost:5000/api/summary'
 
@@ -37,8 +37,13 @@ export default function Popup() {
       setWordCount(data.wordCount)
       setProcessingTime(data.processingTimeMs)
       setStatus('success')
-    } catch {
-      setStatus('error')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      if (message.includes('Could not establish connection')) {
+        setStatus('unsupported-page')
+      } else {
+        setStatus('error')
+      }
     }
   }
 
@@ -66,6 +71,12 @@ export default function Popup() {
       {status === 'not-article' && (
         <p style={{ marginTop: 12, color: '#888', fontSize: 13 }}>
           Ova stranica nije članak.
+        </p>
+      )}
+
+      {status === 'unsupported-page' && (
+        <p style={{ marginTop: 12, color: '#888', fontSize: 13 }}>
+          Ekstenzija ne radi na ovoj stranici.
         </p>
       )}
 
