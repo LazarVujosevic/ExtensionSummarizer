@@ -137,13 +137,16 @@ Response: { "summary": "...", "wordCount": 850, "processingTimeMs": 4200 }
 - **SKEXP0010 suppressed** in `.csproj` — `AddOpenAIChatCompletion` with custom endpoint is a Semantic Kernel experimental API (SKEXP = Semantic Kernel EXPerimental). It works reliably; suppression is the standard SK pattern. Revisit if SK releases a stable connector for Ollama.
 - **Ollama health check uses `ollama list`** — `curl` is not available in the Ollama Docker image. `ollama list` connects to the local server and succeeds only when it is ready, making it a reliable health check.
 - **`ollama-init` has no `sleep`** — replaced with `depends_on: condition: service_healthy` so Docker Compose waits for Ollama to be truly ready before pulling the model.
+- **OpenAPI UI is Scalar, not Swagger** — .NET 9/10 removed Swagger UI from the default template. `Microsoft.AspNetCore.OpenApi` only provides the JSON spec at `/openapi/v1.json`. `Scalar.AspNetCore` was added to serve the interactive UI at `/scalar/v1`. `launchSettings.json` `launchUrl` updated to `scalar/v1` accordingly.
+- **Port 5000 conflict during local dev** — the Docker backend container occupies port 5000, so `dotnet run` (or F5 in Visual Studio) will fail if the container is running. Workflow: `docker compose stop backend` before starting locally, then `docker compose up -d --build backend` when done.
+- **SemanticKernel 1.24.1 has a known critical vulnerability** — `GHSA-2ww3-72rp-wpp4` in `Microsoft.SemanticKernel.Core`. Not blocking for local dev, but must be upgraded before any production deployment.
 
 ---
 
 ## Development Phases
 | Phase | Status | Description |
 |---|---|---|
-| 1 — AI Core | ✅ | Docker Compose + Ollama + ASP.NET API + Semantic Kernel + prompt tuning |
+| 1 — AI Core | ✅ | Docker Compose + Ollama + ASP.NET API + Semantic Kernel + prompt tuning + Scalar UI |
 | 2 — Extension | 🔜 | Readability.js integration + React UI polish |
 | 3 — Integration | 🔜 | End-to-end test, error handling |
 | 4 — Production | 🔜 | VPS deploy + Chrome Web Store (optional) |
