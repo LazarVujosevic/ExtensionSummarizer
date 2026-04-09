@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import styles from './Popup.module.css'
 import './popup.css'
+import { classifyError } from './popupUtils'
 
 type Status = 'idle' | 'loading' | 'success' | 'error' | 'not-article' | 'unsupported-page' | 'timeout' | 'too-short'
 
@@ -56,16 +57,7 @@ export default function Popup() {
       setProcessingTime(data.processingTimeMs)
       setStatus('success')
     } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        setStatus('timeout')
-      } else {
-        const message = err instanceof Error ? err.message : String(err)
-        if (message.includes('Could not establish connection')) {
-          setStatus('unsupported-page')
-        } else {
-          setStatus('error')
-        }
-      }
+      setStatus(classifyError(err))
     } finally {
       clearTimeout(timeoutId)
     }
@@ -123,7 +115,7 @@ export default function Popup() {
       )}
 
       {status === 'too-short' && (
-        <p style={{ marginTop: 12, color: '#888', fontSize: 13 }}>
+        <p className={`${styles.statusMessage} ${styles.statusMuted}`}>
           Članak je prekratak za sumarizaciju.
         </p>
       )}
