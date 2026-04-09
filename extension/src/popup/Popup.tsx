@@ -65,7 +65,7 @@ export default function Popup() {
 
   return (
     <div className={styles.container}>
-      <h2 className={styles.heading}>ExtensionSummarizer</h2>
+      <h2 className={styles.heading}>Summarizer</h2>
 
       <button
         onClick={handleSummarize}
