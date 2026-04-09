@@ -2,7 +2,7 @@ import { useState } from 'react'
 import styles from './Popup.module.css'
 import './popup.css'
 
-type Status = 'idle' | 'loading' | 'success' | 'error' | 'not-article' | 'unsupported-page' | 'timeout'
+type Status = 'idle' | 'loading' | 'success' | 'error' | 'not-article' | 'unsupported-page' | 'timeout' | 'too-short'
 
 const BACKEND_URL = 'http://localhost:5000/api/summary'
 const FETCH_TIMEOUT_MS = 60_000
@@ -32,10 +32,18 @@ export default function Popup() {
         return
       }
 
+      const words = extracted.text.split(/\s+/).filter(Boolean)
+      if (words.length < 100) {
+        setStatus('too-short')
+        return
+      }
+
+      const trimmedText = words.slice(0, 10_000).join(' ')
+
       const response = await fetch(BACKEND_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: tab.url, text: extracted.text }),
+        body: JSON.stringify({ url: tab.url, text: trimmedText }),
         signal: controller.signal,
       })
 
@@ -111,6 +119,12 @@ export default function Popup() {
       {status === 'timeout' && (
         <p className={`${styles.statusMessage} ${styles.statusError}`}>
           Zahtev je trajao predugo. Pokušaj ponovo.
+        </p>
+      )}
+
+      {status === 'too-short' && (
+        <p style={{ marginTop: 12, color: '#888', fontSize: 13 }}>
+          Članak je prekratak za sumarizaciju.
         </p>
       )}
     </div>
