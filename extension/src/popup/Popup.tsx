@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import styles from './Popup.module.css'
 
 type Status = 'idle' | 'loading' | 'success' | 'error' | 'not-article' | 'unsupported-page' | 'timeout'
 
@@ -7,6 +8,7 @@ const FETCH_TIMEOUT_MS = 60_000
 
 export default function Popup() {
   const [summary, setSummary] = useState<string>('')
+  const [title, setTitle] = useState<string>('')
   const [status, setStatus] = useState<Status>('idle')
   const [wordCount, setWordCount] = useState<number>(0)
   const [processingTime, setProcessingTime] = useState<number>(0)
@@ -14,6 +16,7 @@ export default function Popup() {
   const handleSummarize = async () => {
     setStatus('loading')
     setSummary('')
+    setTitle('')
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
@@ -39,6 +42,7 @@ export default function Popup() {
 
       const data = await response.json()
       setSummary(data.summary)
+      setTitle(extracted.title)
       setWordCount(data.wordCount)
       setProcessingTime(data.processingTimeMs)
       setStatus('success')
@@ -59,46 +63,47 @@ export default function Popup() {
   }
 
   return (
-    <div style={{ width: 360, padding: 16, fontFamily: 'sans-serif' }}>
-      <h2 style={{ margin: '0 0 12px', fontSize: 16 }}>ExtensionSummarizer</h2>
+    <div className={styles.container}>
+      <h2 className={styles.heading}>ExtensionSummarizer</h2>
 
       <button
         onClick={handleSummarize}
         disabled={status === 'loading'}
-        style={{ width: '100%', padding: '8px 0', cursor: status === 'loading' ? 'not-allowed' : 'pointer' }}
+        className={styles.button}
       >
         {status === 'loading' ? 'Summarizing...' : 'Summarize'}
       </button>
 
       {status === 'success' && (
-        <div style={{ marginTop: 12 }}>
-          <p style={{ margin: '0 0 8px', lineHeight: 1.5 }}>{summary}</p>
-          <small style={{ color: '#888' }}>
+        <div className={styles.result}>
+          {title && <p className={styles.articleTitle}>{title}</p>}
+          <p className={styles.summary}>{summary}</p>
+          <small className={styles.meta}>
             {wordCount} words · {processingTime}ms
           </small>
         </div>
       )}
 
       {status === 'not-article' && (
-        <p style={{ marginTop: 12, color: '#888', fontSize: 13 }}>
+        <p className={`${styles.statusMessage} ${styles.statusMuted}`}>
           Ova stranica nije članak.
         </p>
       )}
 
       {status === 'unsupported-page' && (
-        <p style={{ marginTop: 12, color: '#888', fontSize: 13 }}>
+        <p className={`${styles.statusMessage} ${styles.statusMuted}`}>
           Ekstenzija ne radi na ovoj stranici.
         </p>
       )}
 
       {status === 'error' && (
-        <p style={{ marginTop: 12, color: 'red', fontSize: 13 }}>
+        <p className={`${styles.statusMessage} ${styles.statusError}`}>
           Greška. Proveri da li backend radi.
         </p>
       )}
 
       {status === 'timeout' && (
-        <p style={{ marginTop: 12, color: 'red', fontSize: 13 }}>
+        <p className={`${styles.statusMessage} ${styles.statusError}`}>
           Zahtev je trajao predugo. Pokušaj ponovo.
         </p>
       )}
