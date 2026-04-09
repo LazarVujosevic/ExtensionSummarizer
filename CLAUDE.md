@@ -181,6 +181,7 @@ Response: { "summary": "...", "wordCount": 850, "processingTimeMs": 4200 }
 - **`@testing-library/react` added for Popup component tests** — Plain jsdom is enough for pure functions (`extract.ts`), but React components need `@testing-library/react` to render and interact. Added `@testing-library/jest-dom` for DOM matchers (`toBeInTheDocument`). Setup in `src/setupTests.ts`; Vitest configured with `globals: true` and `setupFiles: ['./src/setupTests.ts']` in `vitest.config.ts`.
 - **`vi.useFakeTimers()` breaks `waitFor` from Testing Library** — `waitFor` internally uses `setInterval`, which becomes fake when `vi.useFakeTimers()` is active. This causes the timeout test to hang. Solution: mock `fetch` to immediately reject with `new DOMException('Aborted', 'AbortError')` instead of simulating the real 60s wait. This tests the catch block logic correctly without timer complexity.
 - **`gh pr create --head` flag needed with untracked files** — `gh pr create` aborts if the working tree has untracked files, even if they are irrelevant to the PR. Use `--head feature/branch-name` to bypass this check.
+- **Text length validation in popup (ticket 3.5)** — `Popup.tsx` splits `extracted.text` on `\s+` and filters empty strings to get a word array. If fewer than 100 words, sets `too-short` status and returns early (no backend call). If 10,000 or more words, slices to 10,000 and joins back with spaces before sending. The same `words` array is reused for both the length check and the trim, avoiding a second split.
 
 ---
 

@@ -14,7 +14,8 @@ vi.stubGlobal('chrome', {
   },
 })
 
-const EXTRACTED = { title: 'Test Article', text: 'Some article text.' }
+const LONG_TEXT = Array(120).fill('word').join(' ')
+const EXTRACTED = { title: 'Test Article', text: LONG_TEXT }
 const SUMMARY_RESPONSE = { summary: 'Kratki rezime.', wordCount: 4, processingTimeMs: 100 }
 
 beforeEach(() => {
