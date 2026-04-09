@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import styles from './Popup.module.css'
+import './popup.css'
 
 type Status = 'idle' | 'loading' | 'success' | 'error' | 'not-article' | 'unsupported-page' | 'timeout'
 
@@ -71,7 +72,12 @@ export default function Popup() {
         disabled={status === 'loading'}
         className={styles.button}
       >
-        {status === 'loading' ? 'Summarizing...' : 'Summarize'}
+        {status === 'loading' ? (
+          <span className="btnLoading">
+            <span className="spinner" />
+            Summarizing
+          </span>
+        ) : 'Summarize'}
       </button>
 
       {status === 'success' && (
