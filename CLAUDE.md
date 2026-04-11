@@ -75,7 +75,7 @@ ExtensionSummarizer/
     ├── public/
     │   └── icons/icon16.png + icon48.png + icon128.png
     └── src/
-        ├── popup/popup.html + main.tsx + Popup.tsx + Popup.test.tsx
+        ├── popup/popup.html + main.tsx + Popup.tsx + Popup.test.tsx + Popup.module.css + popup.css + popupUtils.ts + popupUtils.test.ts
         ├── content/content.ts + extract.ts + extract.test.ts
         ├── background/background.ts
         └── setupTests.ts
@@ -184,6 +184,11 @@ Response: { "summary": "...", "wordCount": 850, "processingTimeMs": 4200 }
 - **`vi.useFakeTimers()` breaks `waitFor` from Testing Library** — `waitFor` internally uses `setInterval`, which becomes fake when `vi.useFakeTimers()` is active. This causes the timeout test to hang. Solution: mock `fetch` to immediately reject with `new DOMException('Aborted', 'AbortError')` instead of simulating the real 60s wait. This tests the catch block logic correctly without timer complexity.
 - **`gh pr create --head` flag needed with untracked files** — `gh pr create` aborts if the working tree has untracked files, even if they are irrelevant to the PR. Use `--head feature/branch-name` to bypass this check.
 - **Text length validation in popup (ticket 3.5)** — `Popup.tsx` splits `extracted.text` on `\s+` and filters empty strings to get a word array. If fewer than 100 words, sets `too-short` status and returns early (no backend call). If 10,000 or more words, slices to 10,000 and joins back with spaces before sending. The same `words` array is reused for both the length check and the trim, avoiding a second split.
+- **Unit test counts at end of Sprint 3** — Backend: 25 tests (xUnit + Moq), Extension: 23 tests (Vitest + jsdom + @testing-library/react). All passing.
+- **Popup heading is "Summarizer"** — The `<h2>` in `Popup.tsx` was renamed from "ExtensionSummarizer" to "Summarizer" for a cleaner UI. The project and repo name remain "ExtensionSummarizer".
+- **CSS module consistency** — All status message blocks in `Popup.tsx` use `${styles.statusMessage} ${styles.statusError}` or `${styles.statusMuted}`. No inline styles remain in the component. `Popup.module.css` is the single source of truth for all popup styles; `popup.css` contains only the spinner `@keyframes` animation.
+- **PR conflict resolution pattern (Sprint 3)** — PRs #31 and #32 were branched before PR #29 (AbortController timeout) was merged, causing conflicts. Resolution order: merge oldest-base PRs first (CSS layout → spinner → logic changes → refactoring). Each rebase was done with `git rebase origin/main`; conflicts resolved manually, then `git push --force-with-lease`. Fix PR base branch with `gh pr edit <number> --base main`.
+- **Worktree branch lock** — A branch checked out in a worktree cannot be checked out in the main repo. Use `cd` to the worktree dir and run git commands there. `gh pr merge --delete-branch` will also fail for worktree branches — omit `--delete-branch` in that case.
 
 ---
 
@@ -192,5 +197,5 @@ Response: { "summary": "...", "wordCount": 850, "processingTimeMs": 4200 }
 |---|---|---|
 | 1 — AI Core | ✅ | Docker Compose + Ollama + ASP.NET API + Semantic Kernel + prompt tuning + Scalar UI |
 | 2 — Extension | ✅ | Readability.js integration + React UI polish |
-| 3 — Integration | 🔜 | End-to-end test, error handling |
+| 3 — Integration | ✅ | Extension icons, CSS module, loading spinner, fetch timeout, text validation, unit tests |
 | 4 — Production | 🔜 | VPS deploy + Chrome Web Store (optional) |
