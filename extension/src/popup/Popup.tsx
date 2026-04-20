@@ -3,10 +3,9 @@ import styles from './Popup.module.css'
 import './popup.css'
 import { classifyError } from './popupUtils'
 
-type Status = 'idle' | 'loading' | 'success' | 'error' | 'not-article' | 'unsupported-page' | 'timeout' | 'too-short'
+type Status = 'idle' | 'loading' | 'streaming' | 'success' | 'error' | 'not-article' | 'unsupported-page' | 'timeout' | 'too-short'
 
-const BACKEND_URL = 'http://localhost:5000/api/summary'
-const FETCH_TIMEOUT_MS = 60_000
+const STREAM_TIMEOUT_MS = 180_000
 
 export default function Popup() {
   const [summary, setSummary] = useState<string>('')
@@ -19,9 +18,6 @@ export default function Popup() {
     setStatus('loading')
     setSummary('')
     setTitle('')
-
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
@@ -40,28 +36,65 @@ export default function Popup() {
       }
 
       const trimmedText = words.slice(0, 10_000).join(' ')
-
-      const response = await fetch(BACKEND_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: tab.url, text: trimmedText }),
-        signal: controller.signal,
-      })
-
-      if (!response.ok) throw new Error('Backend error')
-
-      const data = await response.json()
-      setSummary(data.summary)
       setTitle(extracted.title)
-      setWordCount(data.wordCount)
-      setProcessingTime(data.processingTimeMs)
-      setStatus('success')
+
+      // Streaming goes through the background service worker. Chrome extension
+      // popup pages buffer cross-origin ReadableStream responses until the full
+      // response completes — the service worker does not have this limitation.
+      const port = chrome.runtime.connect({ name: 'summary-stream' })
+      const timeoutId = setTimeout(() => port.disconnect(), STREAM_TIMEOUT_MS)
+      // Chrome MV3 terminates service workers after ~30s of inactivity.
+      // Sending a periodic ping keeps the worker alive during Ollama's cold start.
+      const keepAliveId = setInterval(() => port.postMessage({ type: 'ping' }), 20_000)
+      let firstToken = true
+      let done = false
+
+      await new Promise<void>((resolve, reject) => {
+        port.onMessage.addListener((event) => {
+          if (event.type === 'token') {
+            if (firstToken) {
+              setStatus('streaming')
+              firstToken = false
+            }
+            setSummary((prev) => prev + event.content)
+          } else if (event.type === 'done') {
+            done = true
+            setWordCount(event.wordCount)
+            setProcessingTime(event.processingTimeMs)
+            setStatus('success')
+            clearTimeout(timeoutId)
+            clearInterval(keepAliveId)
+            port.disconnect()
+            resolve()
+          } else if (event.type === 'error') {
+            done = true
+            clearTimeout(timeoutId)
+            clearInterval(keepAliveId)
+            port.disconnect()
+            reject(new Error('Backend error'))
+          }
+        })
+
+        // onDisconnect fires when:
+        //   - the timeout above calls port.disconnect()  → treat as timeout
+        //   - done/error already disconnected the port   → done=true, skip
+        //   - the popup is closed mid-stream             → no-op (context destroyed)
+        port.onDisconnect.addListener(() => {
+          if (!done) {
+            clearTimeout(timeoutId)
+            clearInterval(keepAliveId)
+            reject(new DOMException('Aborted', 'AbortError'))
+          }
+        })
+
+        port.postMessage({ url: tab.url, text: trimmedText })
+      })
     } catch (err) {
       setStatus(classifyError(err))
-    } finally {
-      clearTimeout(timeoutId)
     }
   }
+
+  const isActive = status === 'loading' || status === 'streaming'
 
   return (
     <div className={styles.container}>
@@ -69,10 +102,10 @@ export default function Popup() {
 
       <button
         onClick={handleSummarize}
-        disabled={status === 'loading'}
+        disabled={isActive}
         className={styles.button}
       >
-        {status === 'loading' ? (
+        {isActive ? (
           <span className="btnLoading">
             <span className="spinner" />
             Summarizing
@@ -80,13 +113,17 @@ export default function Popup() {
         ) : 'Summarize'}
       </button>
 
-      {status === 'success' && (
+      {(status === 'streaming' || status === 'success') && (
         <div className={styles.result}>
           {title && <p className={styles.articleTitle}>{title}</p>}
-          <p className={styles.summary}>{summary}</p>
-          <small className={styles.meta}>
-            {wordCount} words · {processingTime}ms
-          </small>
+          <p className={`${styles.summary} ${status === 'streaming' ? styles.streaming : ''}`}>
+            {summary}
+          </p>
+          {status === 'success' && (
+            <small className={styles.meta}>
+              {wordCount} words · {processingTime}ms
+            </small>
+          )}
         </div>
       )}
 

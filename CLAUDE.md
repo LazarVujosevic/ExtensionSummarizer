@@ -43,8 +43,9 @@ Primary purpose is educational — user is learning AI development while buildin
 | Text extraction | Readability.js |
 | Backend | ASP.NET Core .NET 10 |
 | AI SDK | Semantic Kernel 1.24.1 |
-| Model runner | Ollama (Docker) |
-| Model | Llama 3.1 8B |
+| Model provider | Google Gemini API (gemini-2.5-flash) |
+| Model runner | Ollama (Docker) — kept for local fallback |
+| Local model | Llama 3.1 8B |
 | Infrastructure | Docker Compose |
 
 ---
@@ -87,9 +88,8 @@ ExtensionSummarizer/
 
 ### Active development (during a feature/task)
 - Backend is developed and run locally in **Visual Studio** (F5, hot reload, debugger)
-- Only the Ollama container runs in Docker during development: `docker compose up ollama -d`
-- `appsettings.json` points to `http://localhost:11434` — correct for local dev
-- Docker Compose overrides this with `Ollama__BaseUrl=http://ollama:11434` for the container env
+- Gemini API key lives in `appsettings.Development.json` (gitignored) — never in `appsettings.json`
+- Ollama container still runs in Docker for local fallback: `docker compose up ollama -d`
 
 ### End of feature/task
 - After development is done and committed, rebuild **only the API container**:
@@ -124,7 +124,8 @@ Response: { "summary": "...", "wordCount": 850, "processingTimeMs": 4200 }
 - System + user prompts: English
 - Output: Serbian (Latin script)
 - Temperature: 0.3, MaxTokens: 300
-- Ollama is called via its OpenAI-compatible `/v1` endpoint (works with standard SK OpenAI connector)
+- Gemini is called via its OpenAI-compatible endpoint (`https://generativelanguage.googleapis.com/v1beta/openai/`) — works with standard SK `AddOpenAIChatCompletion` connector, no extra NuGet needed
+- Streaming uses raw HttpClient against the same endpoint with `Authorization: Bearer {apiKey}` header
 
 ### Prompt tuning decisions (ticket 1.2 — validated via direct Ollama API calls)
 
@@ -189,6 +190,13 @@ Response: { "summary": "...", "wordCount": 850, "processingTimeMs": 4200 }
 - **CSS module consistency** — All status message blocks in `Popup.tsx` use `${styles.statusMessage} ${styles.statusError}` or `${styles.statusMuted}`. No inline styles remain in the component. `Popup.module.css` is the single source of truth for all popup styles; `popup.css` contains only the spinner `@keyframes` animation.
 - **PR conflict resolution pattern (Sprint 3)** — PRs #31 and #32 were branched before PR #29 (AbortController timeout) was merged, causing conflicts. Resolution order: merge oldest-base PRs first (CSS layout → spinner → logic changes → refactoring). Each rebase was done with `git rebase origin/main`; conflicts resolved manually, then `git push --force-with-lease`. Fix PR base branch with `gh pr edit <number> --base main`.
 - **Worktree branch lock** — A branch checked out in a worktree cannot be checked out in the main repo. Use `cd` to the worktree dir and run git commands there. `gh pr merge --delete-branch` will also fail for worktree branches — omit `--delete-branch` in that case.
+- **Streaming implemented on `feature/4.2-streaming`** — SSE endpoint at `POST /api/summary/stream`. Backend uses raw HttpClient with `HttpCompletionOption.ResponseHeadersRead` and `Response.BodyWriter.FlushAsync()` (not `Response.Body.FlushAsync()` — different flush semantics). Extension routes streaming through the background service worker because Chrome popup pages buffer cross-origin ReadableStream until complete. Popup↔worker communication via `chrome.runtime.connect` port.
+- **Chrome MV3 service worker keepalive** — Service workers are killed after ~30s of inactivity. Popup sends a `{ type: 'ping' }` message every 20s to keep the worker alive during Ollama/Gemini cold start. Worker ignores ping messages.
+- **Gemini API key storage** — Key goes in `appsettings.Development.json` which is gitignored. Never in `appsettings.json`. Added `appsettings.Development.json` to `.gitignore`.
+- **Gemini model availability** — `gemini-2.0-flash` had `limit: 0` quota on this project's free tier despite being listed. `gemini-2.5-flash` works. Always verify with `GET /v1beta/openai/models` and a test curl before committing to a model name.
+- **Gemini OpenAI-compat model ID format** — Use short form (`gemini-2.5-flash`), not the full form (`models/gemini-2.5-flash`) returned by the models list endpoint.
+- **AMD GPU in Docker Desktop on Windows** — Not feasible for Ollama compute. Mesa RADV needs `/dev/dri` (unavailable in Docker Desktop WSL2). AMD's WSL Vulkan driver (`amdvlk64.dll`) is a Windows DLL, unusable in Linux containers. Only solution is running Ollama natively on Windows.
+- **Ollama warm-up on backend startup** — `Program.cs` registers `app.Lifetime.ApplicationStarted` callback that sends a fire-and-forget dummy request to load the model into memory. Prevents cold-start latency (~30-40s) on first real request. Error is silently swallowed — warm-up is best-effort.
 
 ---
 
